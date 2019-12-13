@@ -6,16 +6,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using TrabalhoIA;
+using UnityEngine.UI;
 
 public class Terminal : MonoBehaviour
 {
-    #region variaveis
+    public GameObject ScreenSprite;
+    public GameObject DarkGraySprite;
+    public GameObject GraySprite;
+    public GameObject LightGraySprite;
+    public GameObject LimeGreenSprite;
+    public GameObject MagentaSprite;
+    public GameObject OrangeSprite;
+    public GameObject RedSprite;
+    public GameObject YellowSprite;
 
+    #region variaveis
     private string[] _arquivo;
     private double _pontuacaoAEstrela;
     private double _pontuacaoGa;
     private List<Terreno> _caminho;
-    //private bool _pronto = false;
+    private bool _pronto = false;
     private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
         {
             {TipoTerreno.Montanhoso, 200},
@@ -28,25 +38,42 @@ public class Terminal : MonoBehaviour
         };
 
     private readonly int _tamanhoDoMapa = 42; /*Obs: mapa atual é 41 x 42*/
-    //private readonly int _tamanhoDoQuadrado = 17; // [netto] variavel nao usada
+    private readonly int _tamanhoDoQuadrado = 17;
     private readonly int _tamPopulacao = 20;
     private readonly int _numGeracoes = 2000;
     private readonly double _taxaDeMutacao = 0.4;
     private Terreno _inicio;
     private Stopwatch _stopWatch;
+    private bool _rodando = false;
 
     #endregion variaveis
 
     // Start is called before the first frame update
     void Start()
     {
-        RodaPrograma();
+        //RectTransform rectTransform;
+
+        //TODO: remove
+        //myGO = new GameObject();
+        //myGO.name = "TestCanvas";
+        //myGO.AddComponent<Canvas>();
+
+        //myCanvas = myGO.GetComponent<Canvas>();
+        //myCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        //myGO.AddComponent<CanvasScaler>();
+        //myGO.AddComponent<GraphicRaycaster>();
+
+
     }
 
     // Update is called once per frame
     void Update()
     {
-
+        if (!_rodando)
+        {
+            _rodando = true;
+            RodaPrograma();
+        }
     }
 
     private void RodaPrograma()
@@ -87,9 +114,10 @@ public class Terminal : MonoBehaviour
         var ga = new GaJogo(_caminho, _tamPopulacao, _numGeracoes, _taxaDeMutacao);
         var melhorIndividuo = ga.Rodadas(ref _pontuacaoGa);
         _stopWatch.Stop();
-        //_pronto = true;
+        _pronto = true;
         //Refresh();
         EscreveSaida(melhorIndividuo);
+        PrintaInterface();
     }
 
 
@@ -245,35 +273,45 @@ public class Terminal : MonoBehaviour
     #endregion
 
     #region Interface
-    //private void PrintaInterface(object sender, PaintEventArgs e)
-    //{
-    //    // [netto] Desenha somente após terminar
-    //    if (!_pronto)
-    //        return;
-    //    DesenhaMapa(e);
-    //    DesenhaCaminho(e);
-    //    MostraCustoDoCaminho(e);
-    //}
+    private void PrintaInterface()
+    {
+        // [netto] Desenha somente após terminar
+        if (!_pronto)
+            return;
+        DesenhaMapa();
+        //DesenhaCaminho(e);
+        //MostraCustoDoCaminho(e);
+    }
 
-    //private void DesenhaMapa(PaintEventArgs e)
-    //{
-    //    var coresVsCasa = new Dictionary<char, Brush>
-    //        {
-    //            {'M', Brushes.Gray},
-    //            {'R', Brushes.DarkGray},
-    //            {'.', Brushes.LightGray},
-    //            {'C', Brushes.Red},
-    //            {'F', Brushes.LimeGreen},
-    //            {'I', Brushes.Orange},
-    //            {'B', Brushes.Gold}
-    //        };
+    private void DesenhaMapa()
+    {
+        var coresVsCasa = new Dictionary<char, GameObject>
+        {
+            {'M', GraySprite},
+            {'R', DarkGraySprite},
+            {'.', LightGraySprite},
+            {'C', RedSprite},
+            {'F', LimeGreenSprite},
+            {'I', OrangeSprite},
+            {'B', YellowSprite}
+        };
 
-    //    for (var j = 0; j < _tamanhoDoMapa; j++)
-    //        for (var i = 0; i < _tamanhoDoMapa - 1; i++)
-    //            e.Graphics.FillRectangle(coresVsCasa[_arquivo[j][i]], _tamanhoDoQuadrado * i, _tamanhoDoQuadrado * j, _tamanhoDoQuadrado, _tamanhoDoQuadrado);
+        for (var j = 0; j < _tamanhoDoMapa; j++)
+        {
+            for (var i = 0; i < _tamanhoDoMapa - 1; i++)
+            {
+                // Tentando instanciar um novo sprit usando Dictionary <char, GameObject>
+                // o for para em (0,0) no print abaixo se chamar Instantiate (?)
+                // Talvez uma melhor abordagem seja fazer um GetNewInstance () que retorna uma instancia dos sprites acima com if-else ou switch ao invés do Dictionary
+                // devo estar me perdendo em algum detalhe de C#
+                print(i + " " + j);
+                Instantiate(GraySprite, new Vector3(0, 0, 0), Quaternion.identity);
+            }
+        }
+        //e.Graphics.FillRectangle(coresVsCasa[_arquivo[j][i]], _tamanhoDoQuadrado * i, _tamanhoDoQuadrado * j, _tamanhoDoQuadrado, _tamanhoDoQuadrado);
 
-    //    DesenhaLinhasDoMapa(e);
-    //}
+        //DesenhaLinhasDoMapa(e);
+    }
 
     //private void DesenhaLinhasDoMapa(PaintEventArgs e)
     //{
