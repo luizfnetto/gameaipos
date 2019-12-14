@@ -10,35 +10,23 @@ using UnityEngine.UI;
 
 public class Terminal : MonoBehaviour
 {
-    public GameObject ScreenSprite;
-    public GameObject DarkGraySprite;
-    public GameObject GraySprite;
-    public GameObject LightGraySprite;
-    public GameObject LimeGreenSprite;
-    public GameObject MagentaSprite;
-    public GameObject OrangeSprite;
-    public GameObject RedSprite;
-    public GameObject YellowSprite;
-
     #region variaveis
     private string[] _arquivo;
     private double _pontuacaoAEstrela;
-    private double _pontuacaoGa;
     private List<Terreno> _caminho;
     private Grafo<Terreno, double> _grafo;
     private bool _pronto = false;
-    private GameObject _tela = null;
     private readonly int _tamanhoDoMapa = 42; /*Obs: mapa atual é 41 x 42*/
     private readonly int _tamanhoDoQuadrado = 17;
-    private readonly int _tamPopulacao = 20;
-    private readonly int _numGeracoes = 2000;
-    private readonly double _taxaDeMutacao = 0.4;
+
     private Terreno _inicio;
     private Stopwatch _stopWatch;
     private bool _rodando = false;
     private bool _sprites_criadas = false;
 
-
+    Texture2D texturaTela = null;
+    private int texEscala = 10;
+    
     private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
     {
         {TipoTerreno.Montanhoso, 200},
@@ -61,6 +49,17 @@ public class Terminal : MonoBehaviour
         {'B', TipoTerreno.BaseInimiga}
     };
 
+    Dictionary<TipoTerreno, Color> corPorTerreno = new Dictionary<TipoTerreno, Color>
+    {
+        {TipoTerreno.Montanhoso, new Color(0.47843137f, 0.47843137f, 0.47843137f)},
+        {TipoTerreno.Plano, new Color(0.754717f, 0.754717f, 0.754717f)},
+        {TipoTerreno.Rochoso, new Color(0.31132078f, 0.31132078f, 0.31132078f)},
+        {TipoTerreno.Inicial, new Color(1, 0.54901963f, 0)},
+        {TipoTerreno.Final, new Color(0.7529412f, 1, 0)},
+        {TipoTerreno.BaseAntiAerea, new Color(1, 0, 0)},
+        {TipoTerreno.BaseInimiga, new Color(1,1,0)}
+    };
+
     #endregion variaveis
 
     // Start is called before the first frame update
@@ -78,7 +77,7 @@ public class Terminal : MonoBehaviour
         //myGO.AddComponent<CanvasScaler>();
         //myGO.AddComponent<GraphicRaycaster>();
         _grafo = CriaGrafoDoMapa();
-        CriaTela();
+        CriaTelaTextura();
     }
 
     // Update is called once per frame
@@ -89,6 +88,7 @@ public class Terminal : MonoBehaviour
             _rodando = true;
             RodaPrograma();
         }
+        //AtualizaTelaComCaminho(texturaTela);
     }
 
     private void RodaPrograma()
@@ -105,7 +105,6 @@ public class Terminal : MonoBehaviour
                 _caminho = caminho;
                 _pontuacaoAEstrela = pontuacao;
             });
-            RodaGa();
         });
     }
 
@@ -120,34 +119,33 @@ public class Terminal : MonoBehaviour
         return heuristica;
     }
 
+    //private void RodaGa()
+    //{
+    //    var ga = new GaJogo(_caminho, _tamPopulacao, _numGeracoes, _taxaDeMutacao);
+    //    var melhorIndividuo = ga.Rodadas(ref _pontuacaoGa);
+    //    _stopWatch.Stop();
+    //    _pronto = true;
+    //    //Refresh();
+    //    EscreveSaida(melhorIndividuo);
+    //}
 
-    private void RodaGa()
-    {
-        var ga = new GaJogo(_caminho, _tamPopulacao, _numGeracoes, _taxaDeMutacao);
-        var melhorIndividuo = ga.Rodadas(ref _pontuacaoGa);
-        _stopWatch.Stop();
-        _pronto = true;
-        //Refresh();
-        EscreveSaida(melhorIndividuo);
-    }
 
-
-    #region Saida
-    private void EscreveSaida(Dictionary<BaseInimiga, List<Aviao>> melhorIndividuo)
-    {
-        var saida = string.Format("Tempo Final: {0} + {1} = {2}\r\n", _pontuacaoAEstrela, _pontuacaoGa, _pontuacaoGa + _pontuacaoAEstrela);
-        saida += string.Format("Tamanho populacao: {0} Numero de Geracoes: {1} Taxa de Mutacao: {2}\r\n", _tamPopulacao, _numGeracoes, _taxaDeMutacao);
-        foreach (var baseInimiga in melhorIndividuo.Keys)
-        {
-            saida += string.Format("Base Inimiga dificuldade: {0} \r\n", baseInimiga.dificuldade);
-            foreach (var aviao in melhorIndividuo[baseInimiga])
-                saida += string.Format("\t\t nome: {0} poder de fogo: {1} vidas restantes: {2}\r\n", aviao.Nome,
-                    aviao.PoderDeFogo, aviao.PontosDeEnergia);
-        }
-        saida += string.Format("Tempo decorrido: {0}", _stopWatch.Elapsed);
-        print(saida);
-    }
-    #endregion Saida
+    //#region Saida
+    //private void EscreveSaida(Dictionary<BaseInimiga, List<Aviao>> melhorIndividuo)
+    //{
+    //    var saida = string.Format("Tempo Final: {0} + {1} = {2}\r\n", _pontuacaoAEstrela, _pontuacaoGa, _pontuacaoGa + _pontuacaoAEstrela);
+    //    saida += string.Format("Tamanho populacao: {0} Numero de Geracoes: {1} Taxa de Mutacao: {2}\r\n", _tamPopulacao, _numGeracoes, _taxaDeMutacao);
+    //    foreach (var baseInimiga in melhorIndividuo.Keys)
+    //    {
+    //        saida += string.Format("Base Inimiga dificuldade: {0} \r\n", baseInimiga.dificuldade);
+    //        foreach (var aviao in melhorIndividuo[baseInimiga])
+    //            saida += string.Format("\t\t nome: {0} poder de fogo: {1} vidas restantes: {2}\r\n", aviao.Nome,
+    //                aviao.PoderDeFogo, aviao.PontosDeEnergia);
+    //    }
+    //    saida += string.Format("Tempo decorrido: {0}", _stopWatch.Elapsed);
+    //    print(saida);
+    //}
+    //#endregion Saida
 
     #region Grafo
     private Grafo<Terreno, double> CriaGrafoDoMapa()
@@ -274,94 +272,53 @@ public class Terminal : MonoBehaviour
     #endregion
 
     #region Interface
-    private void CriaTela()
-    {
-        //TODO [netto]: Criar um gameobject que será o placeholder _tela na cena que iramos criar, assim podemos desenhar o mapa em qualquer lugar
-        _tela = new GameObject("Tela");
-        _tela.transform.localScale = new Vector3(_tamanhoDoMapa, _tamanhoDoMapa, 1);
 
-        GameObject background = Instantiate(ScreenSprite, new Vector3(0, 0, 0), Quaternion.identity);
-        background.transform.parent = _tela.transform;
-        background.transform.localScale = new Vector3(1,1, 1);
+    private void CriaTelaTextura()
+    {
+        texturaTela = CriaTextura();
+        Sprite sprite = Sprite.Create(texturaTela, new Rect(0, 0, texturaTela.width, texturaTela.height), new Vector2(0.5f, 0.5f), 100);
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        sr.sprite = sprite;
+    }
+
+    private Texture2D CriaTextura()
+    {
+        Texture2D tex = new Texture2D(_tamanhoDoMapa * texEscala, _tamanhoDoMapa * texEscala, TextureFormat.RGBA32, false, false);
 
         for (var j = 0; j < _tamanhoDoMapa; j++)
         {
             for (var i = 0; i < _tamanhoDoMapa - 1; i++)
             {
-                //TODO [netto]: 
-                // 1. guardar a referencia para cada gameobject
-                // 2. permitir trocar a cor de cada sprite, ie, deixar de usar um prefab diferente pra cada um e fazer uma funcao q retorna a cor com o no
-                GameObject novo = CriaNoTela(_arquivo[j][i]);
-                novo.transform.parent = _tela.transform;
-                float x = novo.transform.localScale.x;
-                float y = novo.transform.localScale.y;
-                x = i + 1 - _tamanhoDoMapa / 2;
-                y = j + 0.5f - _tamanhoDoMapa / 2;
-                novo.transform.Translate(x, y, -0.1f);
+                TipoTerreno t = tiposDeTerrenoPorLetra[_arquivo[j][i]];
+                SetaCorRegiao(tex, i, j, corPorTerreno[t]);
             }
         }
-        _tela.transform.localScale = new Vector3(10, 10, 1);
+        tex.Apply();
+        return tex;
     }
 
-    private GameObject CriaNoTela(char id)
+    private void SetaCorRegiao (Texture2D tex, int i, int j, Color cor)
     {
-        return CriaNoTela(tiposDeTerrenoPorLetra[id]);
+        for (int y = j * texEscala; y < (j+1) * texEscala; y++)
+        {
+            for (int x = i*texEscala; x < (i+1) * texEscala; x++)
+            {
+                tex.SetPixel(x, y, cor);
+            }
+        }
     }
 
-    private GameObject CriaNoTela(TipoTerreno tipo)
+    private void AtualizaTelaComCaminho (Texture2D tex )
     {
-        if (tipo == TipoTerreno.Montanhoso)
-            return Instantiate(GraySprite, new Vector3(0, 0, 0), Quaternion.identity);
-        if (tipo == TipoTerreno.Rochoso)
-            return Instantiate(DarkGraySprite, new Vector3(0, 0, 0), Quaternion.identity);
-        if (tipo == TipoTerreno.Plano)
-            return Instantiate(LightGraySprite, new Vector3(0, 0, 0), Quaternion.identity);
-        if (tipo == TipoTerreno.BaseAntiAerea)
-            return Instantiate(RedSprite, new Vector3(0, 0, 0), Quaternion.identity);
-        if (tipo == TipoTerreno.Final)
-            return Instantiate(LimeGreenSprite, new Vector3(0, 0, 0), Quaternion.identity);
-        if (tipo == TipoTerreno.Inicial)
-            return Instantiate(OrangeSprite, new Vector3(0, 0, 0), Quaternion.identity);
-        if (tipo == TipoTerreno.BaseInimiga)
-            return Instantiate(YellowSprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (_caminho == null || _caminho.Count <= 0)
+            return;
 
-        return null;
+        for (int i = 0; i < _caminho.Count; i++)
+        {
+            Terreno o = _caminho[i];
+            SetaCorRegiao(tex, o.x, o.y, Color.magenta);
+        }
+        tex.Apply();
     }
-
-    //private void DesenhaLinhasDoMapa(PaintEventArgs e)
-    //{
-    //    var linha = new Pen(Brushes.Black);
-    //    var action = new Action<int>[]
-    //    {
-    //            i => e.Graphics.DrawLine(linha, i, 0, i, _tamanhoDoQuadrado*_tamanhoDoMapa),
-    //            i => e.Graphics.DrawLine(linha, 0, i, _tamanhoDoQuadrado*_tamanhoDoMapa, i)
-    //    };
-    //    foreach (var printLineDirectionMethod in action)
-    //        for (var i = 1; i < _tamanhoDoMapa; i++)
-    //            printLineDirectionMethod(i * _tamanhoDoQuadrado);
-    //}
-
-    //private void MostraCustoDoCaminho(PaintEventArgs e)
-    //{
-    //    e.Graphics.DrawString("Minutos: " + _pontuacaoAEstrela, new Font(FontFamily.GenericSerif, 27, FontStyle.Bold), Brushes.Indigo, new PointF(250, 665));
-    //}
-
-    //void DesenhaCaminho(PaintEventArgs e)
-    //{
-    //    Func<int, int> f = d => d * _tamanhoDoQuadrado;
-
-    //    if (_caminho != null && _caminho.Count > 1) for (int i = 0; i < _caminho.Count; i++)
-    //        {
-    //            Terreno o = _caminho[i];
-    //            e.Graphics.FillRectangle
-    //            (
-    //                new SolidBrush(Color.FromArgb(128, Color.BlueViolet)),
-    //                f(o.x),
-    //                f(o.y),
-    //                _tamanhoDoQuadrado,
-    //                _tamanhoDoQuadrado
-    //            );
-    //        }
-    //}
     #endregion Interface
 }
