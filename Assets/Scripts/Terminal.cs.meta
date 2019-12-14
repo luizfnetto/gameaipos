@@ -3,7 +3,25 @@ guid: 5137f7c905ff8424ea864b03d44317f4
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - ScreenSprite: {fileID: 1115626402093337183, guid: 3cd89c5007c0aa444a67ec38751552f8,
+      type: 3}
+  - DarkGraySprite: {fileID: 5555890365700589254, guid: e5fbe63a6bcdb224098163af6b9f9380,
+      type: 3}
+  - GraySprite: {fileID: 5442423846277028981, guid: af1ba8816b2e9724dbb606b1b23cc290,
+      type: 3}
+  - LightGraySprite: {fileID: 8115741818721849812, guid: 450fde3bd28134945b46c82f6d4e1344,
+      type: 3}
+  - LimeGreenSprite: {fileID: 5957442284459738284, guid: b35c71476328cf2469938b2c3c2ad3e9,
+      type: 3}
+  - MagentaSprite: {fileID: 832241502650431845, guid: 1e7999836dac77d45b5bd6f88907ad45,
+      type: 3}
+  - OrangeSprite: {fileID: 6523669119388787167, guid: f95ee5ff24ce1604fb9f3ce72bc8ce28,
+      type: 3}
+  - RedSprite: {fileID: 695039790695958940, guid: efae72cab5861f64d9fc850a1eaecfae,
+      type: 3}
+  - YellowSprite: {fileID: 2251128398941357154, guid: f2d6566e6d1cf344bb48bcdac35833d1,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

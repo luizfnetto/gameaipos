@@ -25,18 +25,9 @@ public class Terminal : MonoBehaviour
     private double _pontuacaoAEstrela;
     private double _pontuacaoGa;
     private List<Terreno> _caminho;
+    private Grafo<Terreno, double> _grafo;
     private bool _pronto = false;
-    private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
-        {
-            {TipoTerreno.Montanhoso, 200},
-            {TipoTerreno.Plano, 1},
-            {TipoTerreno.Rochoso, 5},
-            {TipoTerreno.Inicial, 0},
-            {TipoTerreno.Final, 0},
-            {TipoTerreno.BaseAntiAerea, 50},
-            {TipoTerreno.BaseInimiga, 0}
-        };
-
+    private GameObject _tela = null;
     private readonly int _tamanhoDoMapa = 42; /*Obs: mapa atual é 41 x 42*/
     private readonly int _tamanhoDoQuadrado = 17;
     private readonly int _tamPopulacao = 20;
@@ -45,6 +36,30 @@ public class Terminal : MonoBehaviour
     private Terreno _inicio;
     private Stopwatch _stopWatch;
     private bool _rodando = false;
+    private bool _sprites_criadas = false;
+
+
+    private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
+    {
+        {TipoTerreno.Montanhoso, 200},
+        {TipoTerreno.Plano, 1},
+        {TipoTerreno.Rochoso, 5},
+        {TipoTerreno.Inicial, 0},
+        {TipoTerreno.Final, 0},
+        {TipoTerreno.BaseAntiAerea, 50},
+        {TipoTerreno.BaseInimiga, 0}
+    };
+
+    Dictionary<char, TipoTerreno> tiposDeTerrenoPorLetra = new Dictionary<char, TipoTerreno>
+    {
+        {'M', TipoTerreno.Montanhoso},
+        {'.', TipoTerreno.Plano},
+        {'R', TipoTerreno.Rochoso},
+        {'I', TipoTerreno.Inicial},
+        {'F', TipoTerreno.Final},
+        {'C', TipoTerreno.BaseAntiAerea},
+        {'B', TipoTerreno.BaseInimiga}
+    };
 
     #endregion variaveis
 
@@ -62,8 +77,8 @@ public class Terminal : MonoBehaviour
         //myCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
         //myGO.AddComponent<CanvasScaler>();
         //myGO.AddComponent<GraphicRaycaster>();
-
-
+        _grafo = CriaGrafoDoMapa();
+        CriaTela();
     }
 
     // Update is called once per frame
@@ -78,20 +93,17 @@ public class Terminal : MonoBehaviour
 
     private void RodaPrograma()
     {
-        var grafo = CriaGrafoDoMapa();
-        _inicio = grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Inicial);
-        var fim = grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Final);
-
+        _inicio = _grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Inicial);
+        var fim = _grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Final);
         //CheckForIllegalCrossThreadCalls = false;
         Task.Run(() =>
         {
             _stopWatch = new Stopwatch();
             _stopWatch.Start();
-            grafo.AEstrela(_inicio, fim, Heuristica, (caminho, pontuacao) => {
+            _grafo.AEstrela(_inicio, fim, Heuristica, (caminho, pontuacao) =>
+            {
                 _caminho = caminho;
                 _pontuacaoAEstrela = pontuacao;
-                //Refresh();
-                //Thread.Sleep(8);
             });
             RodaGa();
         });
@@ -117,7 +129,6 @@ public class Terminal : MonoBehaviour
         _pronto = true;
         //Refresh();
         EscreveSaida(melhorIndividuo);
-        PrintaInterface();
     }
 
 
@@ -145,16 +156,6 @@ public class Terminal : MonoBehaviour
         var dificuldadesBases = new List<int>
             {
                  120, 110, 100,  95, 85, 90, 80, 75, 65, 70, 60
-            };
-        var tiposDeTerrenoPorLetra = new Dictionary<char, TipoTerreno>
-            {
-                {'M', TipoTerreno.Montanhoso},
-                {'.', TipoTerreno.Plano},
-                {'R', TipoTerreno.Rochoso},
-                {'I', TipoTerreno.Inicial},
-                {'F', TipoTerreno.Final},
-                {'C', TipoTerreno.BaseAntiAerea},
-                {'B', TipoTerreno.BaseInimiga}
             };
 
         var grafo = CriaGrafo(dificuldadesBases, tiposDeTerrenoPorLetra);
@@ -273,44 +274,58 @@ public class Terminal : MonoBehaviour
     #endregion
 
     #region Interface
-    private void PrintaInterface()
+    private void CriaTela()
     {
-        // [netto] Desenha somente após terminar
-        if (!_pronto)
-            return;
-        DesenhaMapa();
-        //DesenhaCaminho(e);
-        //MostraCustoDoCaminho(e);
-    }
+        //TODO [netto]: Criar um gameobject que será o placeholder _tela na cena que iramos criar, assim podemos desenhar o mapa em qualquer lugar
+        _tela = new GameObject("Tela");
+        _tela.transform.localScale = new Vector3(_tamanhoDoMapa, _tamanhoDoMapa, 1);
 
-    private void DesenhaMapa()
-    {
-        var coresVsCasa = new Dictionary<char, GameObject>
-        {
-            {'M', GraySprite},
-            {'R', DarkGraySprite},
-            {'.', LightGraySprite},
-            {'C', RedSprite},
-            {'F', LimeGreenSprite},
-            {'I', OrangeSprite},
-            {'B', YellowSprite}
-        };
+        GameObject background = Instantiate(ScreenSprite, new Vector3(0, 0, 0), Quaternion.identity);
+        background.transform.parent = _tela.transform;
+        background.transform.localScale = new Vector3(1,1, 1);
 
         for (var j = 0; j < _tamanhoDoMapa; j++)
         {
             for (var i = 0; i < _tamanhoDoMapa - 1; i++)
             {
-                // Tentando instanciar um novo sprit usando Dictionary <char, GameObject>
-                // o for para em (0,0) no print abaixo se chamar Instantiate (?)
-                // Talvez uma melhor abordagem seja fazer um GetNewInstance () que retorna uma instancia dos sprites acima com if-else ou switch ao invés do Dictionary
-                // devo estar me perdendo em algum detalhe de C#
-                print(i + " " + j);
-                Instantiate(GraySprite, new Vector3(0, 0, 0), Quaternion.identity);
+                //TODO [netto]: 
+                // 1. guardar a referencia para cada gameobject
+                // 2. permitir trocar a cor de cada sprite, ie, deixar de usar um prefab diferente pra cada um e fazer uma funcao q retorna a cor com o no
+                GameObject novo = CriaNoTela(_arquivo[j][i]);
+                novo.transform.parent = _tela.transform;
+                float x = novo.transform.localScale.x;
+                float y = novo.transform.localScale.y;
+                x = i + 1 - _tamanhoDoMapa / 2;
+                y = j + 0.5f - _tamanhoDoMapa / 2;
+                novo.transform.Translate(x, y, -0.1f);
             }
         }
-        //e.Graphics.FillRectangle(coresVsCasa[_arquivo[j][i]], _tamanhoDoQuadrado * i, _tamanhoDoQuadrado * j, _tamanhoDoQuadrado, _tamanhoDoQuadrado);
+        _tela.transform.localScale = new Vector3(10, 10, 1);
+    }
 
-        //DesenhaLinhasDoMapa(e);
+    private GameObject CriaNoTela(char id)
+    {
+        return CriaNoTela(tiposDeTerrenoPorLetra[id]);
+    }
+
+    private GameObject CriaNoTela(TipoTerreno tipo)
+    {
+        if (tipo == TipoTerreno.Montanhoso)
+            return Instantiate(GraySprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (tipo == TipoTerreno.Rochoso)
+            return Instantiate(DarkGraySprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (tipo == TipoTerreno.Plano)
+            return Instantiate(LightGraySprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (tipo == TipoTerreno.BaseAntiAerea)
+            return Instantiate(RedSprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (tipo == TipoTerreno.Final)
+            return Instantiate(LimeGreenSprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (tipo == TipoTerreno.Inicial)
+            return Instantiate(OrangeSprite, new Vector3(0, 0, 0), Quaternion.identity);
+        if (tipo == TipoTerreno.BaseInimiga)
+            return Instantiate(YellowSprite, new Vector3(0, 0, 0), Quaternion.identity);
+
+        return null;
     }
 
     //private void DesenhaLinhasDoMapa(PaintEventArgs e)
