@@ -11,22 +11,25 @@ using UnityEngine.UI;
 public class Terminal : MonoBehaviour
 {
     #region variaveis
-    private string[] _arquivo;
+    // Variaveis do Grafo
     private double _pontuacaoAEstrela;
+    private Terreno _inicio;
     private List<Terreno> _caminho;
     private Grafo<Terreno, double> _grafo;
-    private bool _pronto = false;
+
+    // Variaveis de Entrada
+    private string[] _arquivo;
     private readonly int _tamanhoDoMapa = 42; /*Obs: mapa atual é 41 x 42*/
     private readonly int _tamanhoDoQuadrado = 17;
 
-    private Terreno _inicio;
-    private Stopwatch _stopWatch;
-    private bool _rodando = false;
-    private bool _sprites_criadas = false;
+    // Variaveis de Render
+    private int texEscala = 10; 
+    Texture2D texturaTela = null; // Textura com dimensoes _tamanhoDoMapa * texEscala: pixel perfect não funciona
 
-    Texture2D texturaTela = null;
-    private int texEscala = 10;
-    
+    // Variaveis de controle
+    private bool _rodando = false;
+
+    // Hashes
     private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
     {
         {TipoTerreno.Montanhoso, 200},
@@ -62,20 +65,10 @@ public class Terminal : MonoBehaviour
 
     #endregion variaveis
 
+    #region Unity3D
     // Start is called before the first frame update
     void Start()
     {
-        //RectTransform rectTransform;
-
-        //TODO: remove
-        //myGO = new GameObject();
-        //myGO.name = "TestCanvas";
-        //myGO.AddComponent<Canvas>();
-
-        //myCanvas = myGO.GetComponent<Canvas>();
-        //myCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        //myGO.AddComponent<CanvasScaler>();
-        //myGO.AddComponent<GraphicRaycaster>();
         _grafo = CriaGrafoDoMapa();
         CriaTelaTextura();
     }
@@ -86,28 +79,25 @@ public class Terminal : MonoBehaviour
         if (!_rodando)
         {
             _rodando = true;
-            RodaPrograma();
+            ProcessaAEstrela();
         }
-        //AtualizaTelaComCaminho(texturaTela);
+        AtualizaTelaComCaminho(texturaTela);
     }
+    #endregion Unity3D
 
-    private void RodaPrograma()
+    private void ProcessaAEstrela()
     {
         _inicio = _grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Inicial);
         var fim = _grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Final);
-        //CheckForIllegalCrossThreadCalls = false;
-        Task.Run(() =>
+
+        _grafo.AEstrela(_inicio, fim, Heuristica, (caminho, pontuacao) =>
         {
-            _stopWatch = new Stopwatch();
-            _stopWatch.Start();
-            _grafo.AEstrela(_inicio, fim, Heuristica, (caminho, pontuacao) =>
-            {
-                _caminho = caminho;
-                _pontuacaoAEstrela = pontuacao;
-            });
+            _caminho = caminho;
+            _pontuacaoAEstrela = pontuacao;
         });
     }
-
+    
+    #region Grafo
     private double Heuristica(Terreno terreno)
     {
         var heuristica = Math.Abs(_inicio.x - terreno.x) + Math.Abs(_inicio.y - terreno.y);
@@ -119,35 +109,6 @@ public class Terminal : MonoBehaviour
         return heuristica;
     }
 
-    //private void RodaGa()
-    //{
-    //    var ga = new GaJogo(_caminho, _tamPopulacao, _numGeracoes, _taxaDeMutacao);
-    //    var melhorIndividuo = ga.Rodadas(ref _pontuacaoGa);
-    //    _stopWatch.Stop();
-    //    _pronto = true;
-    //    //Refresh();
-    //    EscreveSaida(melhorIndividuo);
-    //}
-
-
-    //#region Saida
-    //private void EscreveSaida(Dictionary<BaseInimiga, List<Aviao>> melhorIndividuo)
-    //{
-    //    var saida = string.Format("Tempo Final: {0} + {1} = {2}\r\n", _pontuacaoAEstrela, _pontuacaoGa, _pontuacaoGa + _pontuacaoAEstrela);
-    //    saida += string.Format("Tamanho populacao: {0} Numero de Geracoes: {1} Taxa de Mutacao: {2}\r\n", _tamPopulacao, _numGeracoes, _taxaDeMutacao);
-    //    foreach (var baseInimiga in melhorIndividuo.Keys)
-    //    {
-    //        saida += string.Format("Base Inimiga dificuldade: {0} \r\n", baseInimiga.dificuldade);
-    //        foreach (var aviao in melhorIndividuo[baseInimiga])
-    //            saida += string.Format("\t\t nome: {0} poder de fogo: {1} vidas restantes: {2}\r\n", aviao.Nome,
-    //                aviao.PoderDeFogo, aviao.PontosDeEnergia);
-    //    }
-    //    saida += string.Format("Tempo decorrido: {0}", _stopWatch.Elapsed);
-    //    print(saida);
-    //}
-    //#endregion Saida
-
-    #region Grafo
     private Grafo<Terreno, double> CriaGrafoDoMapa()
     {
         CarregaMapaEscolhido();
@@ -164,12 +125,6 @@ public class Terminal : MonoBehaviour
     //Carregamento de arquivo
     private void CarregaMapaEscolhido()
     {
-        //var caminhoArquivo = "";
-        //using (FileDialog fileDialog = new OpenFileDialog())
-        //{
-        //    if (fileDialog.ShowDialog(this) == DialogResult.OK)
-        //        caminhoArquivo = fileDialog.InitialDirectory + fileDialog.FileName;
-        //}
         _arquivo = new string[] {
                 "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
                 "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
@@ -269,9 +224,9 @@ public class Terminal : MonoBehaviour
         if (x < 0 || y < 0 || x > _tamanhoDoMapa - 1 - 1 || y > _tamanhoDoMapa - 1) return null;
         return graph.PegarVertices().Single(vertex => vertex.x == x && vertex.y == y);
     }
-    #endregion
+    #endregion Grafo
 
-    #region Interface
+    #region Render
 
     private void CriaTelaTextura()
     {
@@ -320,5 +275,5 @@ public class Terminal : MonoBehaviour
         }
         tex.Apply();
     }
-    #endregion Interface
+    #endregion Render
 }
