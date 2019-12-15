@@ -36,7 +36,8 @@ public class ShootScript : MonoBehaviour
             }
             if(hit.transform.name != "Player")
             {
-                Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
+                GameObject impactGo = Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
+                Destroy(impactGo, 2f);
             }
             
         }
