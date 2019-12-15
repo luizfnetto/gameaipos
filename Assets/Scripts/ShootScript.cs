@@ -7,6 +7,7 @@ public class ShootScript : MonoBehaviour
     public float range = 100f;
 
     public Camera camera;
+    public ParticleSystem particles;
 
     // Update is called once per frame
     void Update()
@@ -20,6 +21,8 @@ public class ShootScript : MonoBehaviour
 
     void Shoot()
     {
+        particles.Play();
+
         RaycastHit hit;
 
         if (Physics.Raycast(camera.transform.position, camera.transform.forward, out hit, range))
