@@ -8,6 +8,7 @@ public class ShootScript : MonoBehaviour
 
     public Camera camera;
     public ParticleSystem particles;
+    public GameObject impactEffect;
 
     // Update is called once per frame
     void Update()
@@ -33,6 +34,11 @@ public class ShootScript : MonoBehaviour
             {
                 enemy.TakeDamage(damage);
             }
+            if(hit.transform.name != "Player")
+            {
+                Instantiate(impactEffect, hit.point, Quaternion.LookRotation(hit.normal));
+            }
+            
         }
 
     }
