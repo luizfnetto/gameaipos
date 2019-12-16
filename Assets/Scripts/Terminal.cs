@@ -30,6 +30,7 @@ public class Terminal : MonoBehaviour
     // Variaveis de controle
     private bool _rodando = false;
     private bool _timerDisparado = false;
+    private bool _hacked = false;
     private float _timer = 0.0f;
     private float _passoDeTempo = 1.0f;
     private double _razaoDeTempoGrafo = 10.0; // E.g. pontuacaoAEstrela = 280, _razaoDeTempoGrafo = 10, tempoTotalDoTimer = pontuacaoAEstrela/_razaoDeTempoGrafo = 28s
@@ -95,10 +96,21 @@ public class Terminal : MonoBehaviour
         {
             AtualizaTelaComCaminho(_texturaTela);
             _timer += Time.deltaTime;
-            if (_timer > _passoDeTempo)
+            if (_caminho != null && _passosDesenhoCaminhoTotal >= _caminho.Count)
             {
-                _timer -= _passoDeTempo;
-                _passosDesenhoCaminhoTotal += _tamanhoPassoDesenhoCaminho;
+                if (_timer > 0.5f)
+                {
+                    _timerDisparado = false;
+                    _hacked = true;
+                }
+            }
+            else
+            {
+                if (_timer > _passoDeTempo)
+                {
+                    _timer -= _passoDeTempo;
+                    _passosDesenhoCaminhoTotal += _tamanhoPassoDesenhoCaminho;
+                }
             }
         }
     }
@@ -396,6 +408,11 @@ public class Terminal : MonoBehaviour
             SetaCorRegiao(tex, o.x, o.y, Color.magenta);
         }
         tex.Apply();
+    }
+
+    public bool IsHacked ()
+    {
+        return _hacked;
     }
     #endregion Render
 }

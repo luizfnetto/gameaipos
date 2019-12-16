@@ -90,6 +90,12 @@ public class RoomStateMachine : MonoBehaviour
             doorSpt.Close();
 
         Terminal terminalSpt = terminal.GetComponent<Terminal>();
-        terminalSpt.StartHacking();
+        if (GetCurrentState() != StateId.TerminalHacked)
+        {
+            terminalSpt.StartHacking();
+
+            if (terminalSpt.IsHacked())
+                SetState(StateId.TerminalHacked);
+        }
     }
 }
