@@ -9,6 +9,7 @@ public class RoomStateMachine : MonoBehaviour
     public GameObject terminal;
     public GameObject player;
     public GameObject gameOverPanel;
+    public GameObject gameWinPanel;
 
     private StateId _currentState;
     private bool _dead = false;
@@ -37,6 +38,7 @@ public class RoomStateMachine : MonoBehaviour
                 Hacking();
                 break;
             case StateId.TerminalHacked:
+                Win();
                 break;
             case StateId.GameOver:
                 Die();
@@ -52,6 +54,14 @@ public class RoomStateMachine : MonoBehaviour
     public void SetState (StateId state)
     {
         _currentState = state;
+    }
+
+    private void Win()
+    {
+        if (!gameWinPanel.active)
+        {
+            gameWinPanel.SetActive(true);
+        }
     }
 
     private void Die()
