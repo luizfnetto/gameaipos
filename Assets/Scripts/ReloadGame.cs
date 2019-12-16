@@ -9,4 +9,13 @@ public class ReloadGame : MonoBehaviour
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
+
+    void Update()
+    {
+
+        if (Input.GetKeyDown(KeyCode.Backspace))
+        {
+            RestartGame();
+        }
+    }
 }

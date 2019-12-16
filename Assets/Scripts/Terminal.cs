@@ -127,7 +127,9 @@ public class Terminal : MonoBehaviour
         {
             _timer = 0;
             _timerDisparado = true;
+            UnityEngine.Debug.Log("Start Terminal");
         }
+
     }
     #endregion Unity3D
 

@@ -1,5 +1,19 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!136 &889449953
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 383377022839216001}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 1
+  m_Enabled: 1
+  m_Radius: 1.53
+  m_Height: 3.93
+  m_Direction: 1
+  m_Center: {x: 0, y: -0.26, z: -0.42}
 --- !u!114 &1811218674179944436
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12,23 +26,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b0d922d624445824cb1b36b1de919ec0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lookRadius: 10
-  stoppingDistance: 1
+  lookRadius: 25
+  stoppingDistance: 1.5
   MoveSpeed: 4
---- !u!136 &889449953
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 383377022839216001}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 1
-  m_Enabled: 1
-  m_Radius: 1.32
-  m_Height: 3.68
-  m_Direction: 1
-  m_Center: {x: 0, y: 0.19, z: 0}
 --- !u!1001 &384694366032245037
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -42,7 +42,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4973885091301552, guid: 1310908f07bd0d24aa8aaddbb080dbb4, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 10.1
+      value: 14.58
       objectReference: {fileID: 0}
     - target: {fileID: 4973885091301552, guid: 1310908f07bd0d24aa8aaddbb080dbb4, type: 3}
       propertyPath: m_LocalPosition.y
@@ -50,7 +50,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4973885091301552, guid: 1310908f07bd0d24aa8aaddbb080dbb4, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -12.88
+      value: -4.61
       objectReference: {fileID: 0}
     - target: {fileID: 4973885091301552, guid: 1310908f07bd0d24aa8aaddbb080dbb4, type: 3}
       propertyPath: m_LocalRotation.x
@@ -105,8 +105,7 @@ PrefabInstance:
       propertyPath: m_Direction
       value: 2
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 2117301547551526975, guid: 1310908f07bd0d24aa8aaddbb080dbb4, type: 3}
+    m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1310908f07bd0d24aa8aaddbb080dbb4, type: 3}
 --- !u!1 &383377022839216001 stripped
 GameObject:

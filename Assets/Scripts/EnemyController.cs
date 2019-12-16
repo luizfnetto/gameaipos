@@ -1,14 +1,12 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 
 public class EnemyController : MonoBehaviour
 {
     public float lookRadius = 10f;
     Transform target;
-    NavMeshAgent agent;
     public float stoppingDistance = 2f;
     public float MoveSpeed = 4f;
 
@@ -16,7 +14,6 @@ public class EnemyController : MonoBehaviour
     void Start()
     {
         target = PlayerManager.instance.player.transform;
-        agent = GetComponent<NavMeshAgent>();
     }
 
     void Update()

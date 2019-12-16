@@ -10,6 +10,7 @@ public class RoomStateMachine : MonoBehaviour
     public GameObject player;
     public GameObject gameOverPanel;
     public GameObject gameWinPanel;
+    public GameObject enemySpawner;
 
     private StateId _currentState;
     private bool _dead = false;
@@ -61,7 +62,9 @@ public class RoomStateMachine : MonoBehaviour
         if (!gameWinPanel.active)
         {
             gameWinPanel.SetActive(true);
+            Destroy(enemySpawner);
         }
+
     }
 
     private void Die()
@@ -80,6 +83,8 @@ public class RoomStateMachine : MonoBehaviour
             }
             Cursor.visible = true;
             Screen.lockCursor = false;
+
+            enemySpawner.GetComponent<EnemySpawner>().StopSpawning();
         }
     }
 
@@ -96,6 +101,11 @@ public class RoomStateMachine : MonoBehaviour
 
             if (terminalSpt.IsHacked())
                 SetState(StateId.TerminalHacked);
+        }
+
+        if(GetCurrentState() == StateId.Hacking)
+        {
+            enemySpawner.GetComponent<EnemySpawner>().StartSpawning();
         }
     }
 }
