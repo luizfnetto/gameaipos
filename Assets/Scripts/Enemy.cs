@@ -27,6 +27,14 @@ public class Enemy : MonoBehaviour
         stateMachine = GameObject.Find("StateMachineHolder").GetComponent<RoomStateMachine>();
     }
 
+    void OnTriggerEnter(Collider other)
+    {
+
+        if (other.gameObject.tag == "Player")
+        {
+            stateMachine.SetState(RoomStateMachine.StateId.GameOver);
+        }
+    }
 
     //stateMachine.SetState(RoomStateMachine.StateId.GameOver); TODO on contact with enemy
 }
