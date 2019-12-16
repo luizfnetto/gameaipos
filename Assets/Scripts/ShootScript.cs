@@ -18,7 +18,6 @@ public class ShootScript : MonoBehaviour
             if (Input.GetButtonDown("Fire1"))
             {
                 Shoot();
-                //stateMachine.SetState(RoomStateMachine.StateId.GameOver); TODO
             }
         }
     }
