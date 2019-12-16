@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace TrabalhoIA
+namespace GameAIPos
 {
    
     public class Grafo<VT, ET> where VT : class

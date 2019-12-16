@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace TrabalhoIA
+namespace GameAIPos
 {
     internal static class AlgoritimoAEstrela
     {

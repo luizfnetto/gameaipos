@@ -5,111 +5,111 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
-using TrabalhoIA;
+using GameAIPos;
 using UnityEngine.UI;
 
 public class Terminal : MonoBehaviour
 {
-    #region variaveis
+    #region variables
     // Variaveis do Grafo
-    private double _pontuacaoAEstrela;
-    private Terreno _inicio;
-    private List<Terreno> _caminho;
-    private Grafo<Terreno, double> _grafo;
+    private double _aStarScore;
+    private Node _startingPoint;
+    private List<Node> _path;
+    private Grafo<Node, double> _graph;
 
     // Variaveis de Entrada
-    private string[] _arquivo;
-    private readonly int _tamanhoDoMapa = 42; /*Obs: mapa atual é 41 x 42*/
+    private string[] _nodeSysField;
+    private readonly int _fieldSize = 42; /*Obs: mapa atual é 41 x 42*/
 
     // Variaveis de Render
     private int texEscala = 10;
-    private int _passosDesenhoCaminhoTotal = 0;
-    private int _tamanhoPassoDesenhoCaminho = 1;
-    Texture2D _texturaTela = null; // Textura com dimensoes _tamanhoDoMapa * texEscala: pixel perfect não funciona
+    private int _totalRenderPathSteps = 0;
+    private int _renderPathStepSize = 1;
+    Texture2D _screenTex = null; // Textura com dimensoes _fieldSize * texEscala: pixel perfect não funciona
 
     // Variaveis de controle
-    private bool _rodando = false;
-    private bool _timerDisparado = false;
+    private bool _running = false;
+    private bool _timerTriggered = false;
     private bool _hacked = false;
     private float _timer = 0.0f;
-    private float _passoDeTempo = 1.0f;
-    private double _razaoDeTempoGrafo = 10.0; // E.g. pontuacaoAEstrela = 280, _razaoDeTempoGrafo = 10, tempoTotalDoTimer = pontuacaoAEstrela/_razaoDeTempoGrafo = 28s
+    private float _timeStep = 1.0f;
+    private double _thresholdForRatio = 10.0; // E.g. _aStarScore = 280, _thresholdForRatio = 10, totaltime = _aStarScore/_thresholdForRatio = 28s
 
     // Hashes
-    private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
+    private readonly Dictionary<NodeType, double> _timeByNode = new Dictionary<NodeType, double>
     {
-        {TipoTerreno.Montanhoso, 200},
-        {TipoTerreno.Plano, 1},
-        {TipoTerreno.Rochoso, 5},
-        {TipoTerreno.Inicial, 0},
-        {TipoTerreno.Final, 0},
-        {TipoTerreno.BaseAntiAerea, 50},
-        {TipoTerreno.BaseInimiga, 0}
+        {NodeType.NoiseField, 200},
+        {NodeType.PlainField, 1},
+        {NodeType.Scrambled, 5},
+        {NodeType.InitialConn, 0},
+        {NodeType.LocalMainFrame, 0},
+        {NodeType.StrongSysDef, 50},
+        {NodeType.NormalSysDef, 0}
     };
 
-    Dictionary<char, TipoTerreno> tiposDeTerrenoPorLetra = new Dictionary<char, TipoTerreno>
+    Dictionary<char, NodeType> _nodeTypeByLetter = new Dictionary<char, NodeType>
     {
-        {'M', TipoTerreno.Montanhoso},
-        {'.', TipoTerreno.Plano},
-        {'R', TipoTerreno.Rochoso},
-        {'I', TipoTerreno.Inicial},
-        {'F', TipoTerreno.Final},
-        {'C', TipoTerreno.BaseAntiAerea},
-        {'B', TipoTerreno.BaseInimiga}
+        {'N', NodeType.NoiseField},
+        {'.', NodeType.PlainField},
+        {'S', NodeType.Scrambled},
+        {'I', NodeType.InitialConn},
+        {'F', NodeType.LocalMainFrame},
+        {'H', NodeType.StrongSysDef},
+        {'E', NodeType.NormalSysDef}
     };
 
-    Dictionary<TipoTerreno, Color> corPorTerreno = new Dictionary<TipoTerreno, Color>
+    Dictionary<NodeType, Color> _colorByNodeType = new Dictionary<NodeType, Color>
     {
-        {TipoTerreno.Montanhoso, new Color(0.47843137f, 0.47843137f, 0.47843137f)},
-        {TipoTerreno.Plano, new Color(0.754717f, 0.754717f, 0.754717f)},
-        {TipoTerreno.Rochoso, new Color(0.31132078f, 0.31132078f, 0.31132078f)},
-        {TipoTerreno.Inicial, new Color(1, 0.54901963f, 0)},
-        {TipoTerreno.Final, new Color(0.7529412f, 1, 0)},
-        {TipoTerreno.BaseAntiAerea, new Color(1, 0, 0)},
-        {TipoTerreno.BaseInimiga, new Color(1,1,0)}
+        {NodeType.NoiseField, new Color(0.47843137f, 0.47843137f, 0.47843137f)},
+        {NodeType.PlainField, new Color(0.754717f, 0.754717f, 0.754717f)},
+        {NodeType.Scrambled, new Color(0.31132078f, 0.31132078f, 0.31132078f)},
+        {NodeType.InitialConn, new Color(1, 0.54901963f, 0)},
+        {NodeType.LocalMainFrame, new Color(0.7529412f, 1, 0)},
+        {NodeType.StrongSysDef, new Color(1, 0, 0)},
+        {NodeType.NormalSysDef, new Color(1,1,0)}
     };
 
-    #endregion variaveis
+    #endregion variables
 
     #region Unity3D
     // Start is called before the first frame update
     void Start()
     {
-        _grafo = CriaGrafoDoMapa();
+        _graph = CriaGrafoDoMapa();
         CriaTelaTextura();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (!_rodando)
+        if (!_running)
         {
-            _rodando = true;
+            _running = true;
             ProcessaAEstrela();
-            print("Pontuação do AEstrela:" + _pontuacaoAEstrela);
-            double tempo = _pontuacaoAEstrela / 10.0;
-            //_tamanhoPassoDesenhoCaminho = _caminho.Count / (int)tempo;
-            _passoDeTempo = (float)tempo / _caminho.Count;
+            print("Pontuação do AEstrela:" + _aStarScore);
+            double tempo = _aStarScore / _thresholdForRatio;
+            //_renderPathStepSize = _path.Count / (int)tempo;
+            _timeStep = (float)tempo / _path.Count;
         }
 
-        if (_timerDisparado)
+        if (_timerTriggered)
         {
-            AtualizaTelaComCaminho(_texturaTela);
+            AtualizaTelaComCaminho(_screenTex);
             _timer += Time.deltaTime;
-            if (_caminho != null && _passosDesenhoCaminhoTotal >= _caminho.Count)
+            if (_path != null && _totalRenderPathSteps >= _path.Count)
             {
                 if (_timer > 0.5f)
                 {
-                    _timerDisparado = false;
+                    _timerTriggered = false;
                     _hacked = true;
                 }
             }
             else
             {
-                if (_timer > _passoDeTempo)
+                if (_timer > _timeStep)
                 {
-                    _timer -= _passoDeTempo;
-                    _passosDesenhoCaminhoTotal += _tamanhoPassoDesenhoCaminho;
+                    _timer -= _timeStep;
+                    _totalRenderPathSteps += _renderPathStepSize;
                 }
             }
         }
@@ -118,7 +118,7 @@ public class Terminal : MonoBehaviour
     public void StartHacking ()
     {
         // Se ja esta sendo processado, retorna
-        if (_timerDisparado) 
+        if (_timerTriggered) 
             return;
 
         // Delay de 3 segundos antes de comecar o hacking
@@ -126,7 +126,7 @@ public class Terminal : MonoBehaviour
         if (_timer > 3)
         {
             _timer = 0;
-            _timerDisparado = true;
+            _timerTriggered = true;
             UnityEngine.Debug.Log("Start Terminal");
         }
 
@@ -135,29 +135,29 @@ public class Terminal : MonoBehaviour
 
     private void ProcessaAEstrela()
     {
-        _inicio = _grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Inicial);
-        var fim = _grafo.PegarVertices().Single(node => node.tipo == TipoTerreno.Final);
+        _startingPoint = _graph.PegarVertices().Single(node => node.tipo == NodeType.InitialConn);
+        var fim = _graph.PegarVertices().Single(node => node.tipo == NodeType.LocalMainFrame);
 
-        _grafo.AEstrela(_inicio, fim, Heuristica, (caminho, pontuacao) =>
+        _graph.AEstrela(_startingPoint, fim, Heuristica, (caminho, pontuacao) =>
         {
-            _caminho = caminho;
-            _pontuacaoAEstrela = pontuacao;
+            _path = caminho;
+            _aStarScore = pontuacao;
         });
     }
     
     #region Grafo
-    private double Heuristica(Terreno terreno)
+    private double Heuristica(Node terreno)
     {
-        var heuristica = Math.Abs(_inicio.x - terreno.x) + Math.Abs(_inicio.y - terreno.y);
-        if (terreno.tipo == TipoTerreno.BaseInimiga)
+        var heuristica = Math.Abs(_startingPoint.x - terreno.x) + Math.Abs(_startingPoint.y - terreno.y);
+        if (terreno.tipo == NodeType.NormalSysDef)
         {
-            var baseInimiga = (BaseInimiga)terreno;
-            return heuristica + baseInimiga.dificuldade / 1.3;
+            var baseInimiga = (NormalSysDef)terreno;
+            return heuristica + baseInimiga.difficulty / 1.3;
         }
         return heuristica;
     }
 
-    private Grafo<Terreno, double> CriaGrafoDoMapa()
+    private Grafo<Node, double> CriaGrafoDoMapa()
     {
         CarregaMapaEscolhido();
         var dificuldadesBases = new List<int>
@@ -165,7 +165,7 @@ public class Terminal : MonoBehaviour
                  120, 110, 100,  95, 85, 90, 80, 75, 65, 70, 60
             };
 
-        var grafo = CriaGrafo(dificuldadesBases, tiposDeTerrenoPorLetra);
+        var grafo = CriaGrafo(dificuldadesBases, _nodeTypeByLetter);
 
         return grafo;
     }
@@ -173,167 +173,167 @@ public class Terminal : MonoBehaviour
     //Carregamento de arquivo
     private void CarregaMapaEscolhido()
     {
-        // _arquivo = new string[] {
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMMMMMF.............................MMMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.MMMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM..................................MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM..................................MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.MMMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM..................................MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM..................................MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM..................................MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMM................................I.MMMM",
-        //     "MMMMM................MM................MMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
-    // _arquivo = new string[] {
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM................................F.MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.MMMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMM................................I.MMMM",
-    //        "MMMM..................................MMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
-    _arquivo = new string[] {
-           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-           "MMMM..........M....RR.........R...R...MMMM",
-           "MMMM.RRR.R.R..B..R....RRR.R.R.R.R...F.MMMM",
-           "MMMM.....R.R..M..R.RR.....R.R.R.R.R...MMMM",
-           "MMMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-           "MMMM.R.MMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-           "MMMM.R..R......M.....RR..R.....M...R..MMMM",
-           "MMMM.R..R.RRR..B..R..RR..R.RRR.B.R.RR.MMMM",
-           "MMMM........R..M..R..........R.M.R....MMMM",
-           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.R.MMMM",
-           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMBMMMMM",
-           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
-           "MMMM....R.M..R.....R.....R.M..R...R.R.MMMM",
-           "MMMM....R.B.RR..R..R.R...R.B.RR...R.R.MMMM",
-           "MMMMRR....M.....R.....R....M..........MMMM",
-           "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
-           "MMMMRR.MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
-           "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
-           "MMMM.R.MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
-           "MMMM.R....M.....R.....R....M..........MMMM",
-           "MMMM.RR.R.B..RR.RRR.RRRR.R.B..R.RR....MMMM",
-           "MMMM....R.M.......R.R....R.M.....R.RR.MMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMM...MMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMRR.MMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMM...MMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMRR.MMMM",
-           "MMMM....R....R....M......R....R..M..R.MMMM",
-           "MMMMRRR.R.R..R.RR.B..RRR.R.R..RR.B..R.MMMM",
-           "MMMM......R.......M..R.....R.....M....MMMM",
-           "MMMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-           "MMMM...MMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-           "MMMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-           "MMMM..R......R...R..M..R......R.R.....MMMM",
-           "MMMM..RRR.R..R..RRR.B..RRR.R..R.RR..I.MMMM",
-           "MMMM......R.........M......R..........MMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
-}
+        _nodeSysField = new string[] {
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNNNNNF.............................NNNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.NNNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN..................................NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN..................................NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.NNNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN..................................NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN..................................NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN..NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN..................................NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNN................................I.NNNN",
+             "NNNNN................NN................NNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+             "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"};
+        //_nodeSysField = new string[] {
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN................................F.NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.NNNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNN................................I.NNNN",
+        //        "NNNN..................................NNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //        "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"};
+        //_nodeSysField = new string[] {
+        //       "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNN..........N....SS.........S...S...NNNN",
+        //       "NNNN.SSS.S.S..E..S....SSS.S.S.S.S...F.NNNN",
+        //       "NNNN.....S.S..N..S.SS.....S.S.S.S.S...NNNN",
+        //       "NNNN.SSNNNNNNNNNNNNNNHNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNN.S.NNNNNNNNNNNNNNHNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNN.S..S......N.....SS..S.....N...S..NNNN",
+        //       "NNNN.S..S.SSS..E..S..SS..S.SSS.E.S.SS.NNNN",
+        //       "NNNN........S..N..S..........S.N.S....NNNN",
+        //       "NNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN.S.NNNN",
+        //       "NNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //       "NNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNENNNNN",
+        //       "NNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //       "NNNNHNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN...NNNN",
+        //       "NNNN....S.N..S.....S.....S.N..S...S.S.NNNN",
+        //       "NNNN....S.E.SS..S..S.S...S.E.SS...S.S.NNNN",
+        //       "NNNNSS....N.....S.....S....N..........NNNN",
+        //       "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNHNNNNNNNN",
+        //       "NNNNSS.NNNNNNNNNNNNNNNNNNNNNNNNNNHNNNNNNNN",
+        //       "NNNN...NNNNNNNNNNNNNNNNNNNNNNNNNNHNNNNNNNN",
+        //       "NNNN.S.NNNNNNNNNNNNNNNNNNNNNNNNNNHNNNNNNNN",
+        //       "NNNN.S....N.....S.....S....N..........NNNN",
+        //       "NNNN.SS.S.E..SS.SSS.SSSS.S.E..S.SS....NNNN",
+        //       "NNNN....S.N.......S.S....S.N.....S.SS.NNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNHNNNNNNNNNNNN...NNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNHNNNNNNNNNNNNSS.NNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNHNNNNNNNNNNNN...NNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNHNNNNNNNNNNNNSS.NNNN",
+        //       "NNNN....S....S....N......S....S..N..S.NNNN",
+        //       "NNNNSSS.S.S..S.SS.E..SSS.S.S..SS.E..S.NNNN",
+        //       "NNNN......S.......N..S.....S.....N....NNNN",
+        //       "NNNN.SSNNNNNNNNNNNNNNHNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNN...NNNNNNNNNNNNNNHNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNN.SSNNNNNNNNNNNNNNHNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNN..S......S...S..N..S......S.S.....NNNN",
+        //       "NNNN..SSS.S..S..SSS.E..SSS.S..S.SS..I.NNNN",
+        //       "NNNN......S.........N......S..........NNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+        //       "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"};
+    }
 
     //Criação de grafo
-    private Grafo<Terreno, double> CriaGrafo(IReadOnlyList<int> dificuldadesBases, Dictionary<char, TipoTerreno> tiposDeTerrenoPorLetra)
+    private Grafo<Node, double> CriaGrafo(IReadOnlyList<int> dificuldadesBases, Dictionary<char, NodeType> _nodeTypeByLetter)
     {
 
-        var grafo = new Grafo<Terreno, double>();
+        var grafo = new Grafo<Node, double>();
 
-        AdicionarVertices(dificuldadesBases, tiposDeTerrenoPorLetra, grafo);
+        AdicionarVertices(dificuldadesBases, _nodeTypeByLetter, grafo);
         AdicionarArestas(grafo);
         return grafo;
     }
 
-    private void AdicionarVertices(IReadOnlyList<int> dificuldadesBases, Dictionary<char, TipoTerreno> tiposDeTerrenoPorLetra,
-        Grafo<Terreno, double> grafo)
+    private void AdicionarVertices(IReadOnlyList<int> dificuldadesBases, Dictionary<char, NodeType> _nodeTypeByLetter,
+        Grafo<Node, double> grafo)
     {
 
         var indexBaseInimiga = 0;
-        for (var y = 0; y < _tamanhoDoMapa; y++)
-            for (var x = 0; x < _tamanhoDoMapa; x++)
+        for (var y = 0; y < _fieldSize; y++)
+            for (var x = 0; x < _fieldSize; x++)
             {
-                var corrente = _arquivo[y][x];
-                grafo.AdicionarVetice(corrente != 'B'
-                    ? new Terreno(x, y, tiposDeTerrenoPorLetra[corrente])
-                    : new BaseInimiga(x, y, dificuldadesBases[indexBaseInimiga++]));
+                var corrente = _nodeSysField[y][x];
+                grafo.AdicionarVetice(corrente != 'E'
+                    ? new Node(x, y, _nodeTypeByLetter[corrente])
+                    : new NormalSysDef(x, y, dificuldadesBases[indexBaseInimiga++]));
             }
     }
 
-    private void AdicionarArestas(Grafo<Terreno, double> grafo)
+    private void AdicionarArestas(Grafo<Node, double> grafo)
     {
-        for (var y = 0; y < _tamanhoDoMapa; y++)
-            for (var x = 0; x < _tamanhoDoMapa; x++)
+        for (var y = 0; y < _fieldSize; y++)
+            for (var x = 0; x < _fieldSize; x++)
             {
                 var corrente = PegarTerrenoDeGrafoEmCoordenada(grafo, x, y);
 
@@ -348,14 +348,14 @@ public class Terminal : MonoBehaviour
                     var noAdjacente = PegarTerrenoDeGrafoEmCoordenada(grafo, x + coordinates[0], y + coordinates[1]);
 
                     if (noAdjacente != null)
-                        grafo.AdicionarAresta(corrente, _tempoGastoPorTerreno[corrente.tipo], noAdjacente);
+                        grafo.AdicionarAresta(corrente, _timeByNode[corrente.tipo], noAdjacente);
                 }
             }
     }
 
-    private Terreno PegarTerrenoDeGrafoEmCoordenada(Grafo<Terreno, double> graph, int x, int y)
+    private Node PegarTerrenoDeGrafoEmCoordenada(Grafo<Node, double> graph, int x, int y)
     {
-        if (x >= 0 && x < _tamanhoDoMapa && y >= 0 && y < _tamanhoDoMapa)
+        if (x >= 0 && x < _fieldSize && y >= 0 && y < _fieldSize)
             return graph.PegarVertices().Single(vertex => vertex.x == x && vertex.y == y);
 
         return null;
@@ -366,22 +366,22 @@ public class Terminal : MonoBehaviour
 
     private void CriaTelaTextura()
     {
-        _texturaTela = CriaTextura();
-        Sprite sprite = Sprite.Create(_texturaTela, new Rect(0, 0, _texturaTela.width, _texturaTela.height), new Vector2(0.5f, 0.5f), 100);
+        _screenTex = CriaTextura();
+        Sprite sprite = Sprite.Create(_screenTex, new Rect(0, 0, _screenTex.width, _screenTex.height), new Vector2(0.5f, 0.5f), 100);
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         sr.sprite = sprite;
     }
 
     private Texture2D CriaTextura()
     {
-        Texture2D tex = new Texture2D(_tamanhoDoMapa * texEscala, _tamanhoDoMapa * texEscala, TextureFormat.RGBA32, false, false);
+        Texture2D tex = new Texture2D(_fieldSize * texEscala, _fieldSize * texEscala, TextureFormat.RGBA32, false, false);
 
-        for (var j = 0; j < _tamanhoDoMapa; j++)
+        for (var j = 0; j < _fieldSize; j++)
         {
-            for (var i = 0; i < _tamanhoDoMapa; i++)
+            for (var i = 0; i < _fieldSize; i++)
             {
-                TipoTerreno t = tiposDeTerrenoPorLetra[_arquivo[j][i]];
-                SetaCorRegiao(tex, i, j, corPorTerreno[t]);
+                NodeType t = _nodeTypeByLetter[_nodeSysField[j][i]];
+                SetaCorRegiao(tex, i, j, _colorByNodeType[t]);
             }
         }
         tex.Apply();
@@ -401,12 +401,12 @@ public class Terminal : MonoBehaviour
 
     private void AtualizaTelaComCaminho (Texture2D tex )
     {
-        if (_caminho == null || _caminho.Count <= 0)
+        if (_path == null || _path.Count <= 0)
             return;
 
-        for (int i = 0; i < _caminho.Count && i < _passosDesenhoCaminhoTotal; i++)
+        for (int i = 0; i < _path.Count && i < _totalRenderPathSteps; i++)
         {
-            Terreno o = _caminho[i];
+            Node o = _path[i];
             SetaCorRegiao(tex, o.x, o.y, Color.magenta);
         }
         tex.Apply();
