@@ -20,14 +20,19 @@ public class Terminal : MonoBehaviour
     // Variaveis de Entrada
     private string[] _arquivo;
     private readonly int _tamanhoDoMapa = 42; /*Obs: mapa atual é 41 x 42*/
-    private readonly int _tamanhoDoQuadrado = 17;
 
     // Variaveis de Render
-    private int texEscala = 10; 
-    Texture2D texturaTela = null; // Textura com dimensoes _tamanhoDoMapa * texEscala: pixel perfect não funciona
+    private int texEscala = 10;
+    private int _passosDesenhoCaminhoTotal = 0;
+    private int _tamanhoPassoDesenhoCaminho = 1;
+    Texture2D _texturaTela = null; // Textura com dimensoes _tamanhoDoMapa * texEscala: pixel perfect não funciona
 
     // Variaveis de controle
     private bool _rodando = false;
+    private bool _timerDisparado = false;
+    private float _timer = 0.0f;
+    private float _passoDeTempo = 1.0f;
+    private double _razaoDeTempoGrafo = 10.0; // E.g. pontuacaoAEstrela = 280, _razaoDeTempoGrafo = 10, tempoTotalDoTimer = pontuacaoAEstrela/_razaoDeTempoGrafo = 28s
 
     // Hashes
     private readonly Dictionary<TipoTerreno, double> _tempoGastoPorTerreno = new Dictionary<TipoTerreno, double>
@@ -80,8 +85,37 @@ public class Terminal : MonoBehaviour
         {
             _rodando = true;
             ProcessaAEstrela();
+            print("Pontuação do AEstrela:" + _pontuacaoAEstrela);
+            double tempo = _pontuacaoAEstrela / 10.0;
+            //_tamanhoPassoDesenhoCaminho = _caminho.Count / (int)tempo;
+            _passoDeTempo = (float)tempo / _caminho.Count;
         }
-        AtualizaTelaComCaminho(texturaTela);
+
+        if (_timerDisparado)
+        {
+            AtualizaTelaComCaminho(_texturaTela);
+            _timer += Time.deltaTime;
+            if (_timer > _passoDeTempo)
+            {
+                _timer -= _passoDeTempo;
+                _passosDesenhoCaminhoTotal += _tamanhoPassoDesenhoCaminho;
+            }
+        }
+    }
+
+    public void StartHacking ()
+    {
+        // Se ja esta sendo processado, retorna
+        if (_timerDisparado) 
+            return;
+
+        // Delay de 3 segundos antes de comecar o hacking
+        _timer += Time.deltaTime;
+        if (_timer > 3)
+        {
+            _timer = 0;
+            _timerDisparado = true;
+        }
     }
     #endregion Unity3D
 
@@ -125,50 +159,136 @@ public class Terminal : MonoBehaviour
     //Carregamento de arquivo
     private void CarregaMapaEscolhido()
     {
-        _arquivo = new string[] {
-                "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-                "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-                "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-                "MMM..........M....RR.........R....R...MMM",
-                "MMM.RRR.R.R..B..R....RRR.R.R.R..R...F.MMM",
-                "MMM.....R.R..M..R.RR.....R.R.R..R.R...MMM",
-                "MMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-                "MMM.R.MMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-                "MMM.R..R......M.....RR..R.....M....R..MMM",
-                "MMM.R..R.RRR..B..R..RR..R.RRR.B..R.RR.MMM",
-                "MMM........R..M..R..........R.M..R....MMM",
-                "MMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.R.MMM",
-                "MMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMM",
-                "MMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMBMMMM",
-                "MMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMM",
-                "MMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMM",
-                "MMM....R.M..R.....R.....R.M..R....R.R.MMM",
-                "MMM....R.B.RR..R..R.R...R.B.RR.R..R.R.MMM",
-                "MMMRR....M.....R.....R....M....R......MMM",
-                "MMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMM",
-                "MMMRR.MMMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMM",
-                "MMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMM",
-                "MMM.R.MMMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMM",
-                "MMM.R....M.....R.....R....M....R......MMM",
-                "MMM.RR.R.B..RR.RRR.RRRR.R.B..R.RRR....MMM",
-                "MMM....R.M.......R.R....R.M......R.RR.MMM",
-                "MMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMM...MMM",
-                "MMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMMRR.MMM",
-                "MMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMM...MMM",
-                "MMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMMRR.MMM",
-                "MMM....R....R....M......R....R...M..R.MMM",
-                "MMMRRR.R.R..R.RR.B..RRR.R.R..RRR.B..R.MMM",
-                "MMM......R.......M..R.....R......M....MMM",
-                "MMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-                "MMM...MMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-                "MMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
-                "MMM..R......R...R..M..R......R..R.....MMM",
-                "MMM..RRR.R..R..RRR.B..RRR.R..R.RRR..I.MMM",
-                "MMM......R.........M......R...........MMM",
-                "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-                "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
-                "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
-    }
+        // _arquivo = new string[] {
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMMMMMF.............................MMMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.MMMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM..................................MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM..................................MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.MMMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM..................................MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM..................................MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM..MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM..................................MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMM................................I.MMMM",
+        //     "MMMMM................MM................MMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+        //     "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
+    // _arquivo = new string[] {
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM................................F.MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.MMMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMM................................I.MMMM",
+    //        "MMMM..................................MMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    //        "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
+    _arquivo = new string[] {
+           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+           "MMMM..........M....RR.........R...R...MMMM",
+           "MMMM.RRR.R.R..B..R....RRR.R.R.R.R...F.MMMM",
+           "MMMM.....R.R..M..R.RR.....R.R.R.R.R...MMMM",
+           "MMMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
+           "MMMM.R.MMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
+           "MMMM.R..R......M.....RR..R.....M...R..MMMM",
+           "MMMM.R..R.RRR..B..R..RR..R.RRR.B.R.RR.MMMM",
+           "MMMM........R..M..R..........R.M.R....MMMM",
+           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM.R.MMMM",
+           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMBMMMMM",
+           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+           "MMMMCMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM...MMMM",
+           "MMMM....R.M..R.....R.....R.M..R...R.R.MMMM",
+           "MMMM....R.B.RR..R..R.R...R.B.RR...R.R.MMMM",
+           "MMMMRR....M.....R.....R....M..........MMMM",
+           "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
+           "MMMMRR.MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
+           "MMMM...MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
+           "MMMM.R.MMMMMMMMMMMMMMMMMMMMMMMMMMCMMMMMMMM",
+           "MMMM.R....M.....R.....R....M..........MMMM",
+           "MMMM.RR.R.B..RR.RRR.RRRR.R.B..R.RR....MMMM",
+           "MMMM....R.M.......R.R....R.M.....R.RR.MMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMM...MMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMRR.MMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMM...MMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMCMMMMMMMMMMMMRR.MMMM",
+           "MMMM....R....R....M......R....R..M..R.MMMM",
+           "MMMMRRR.R.R..R.RR.B..RRR.R.R..RR.B..R.MMMM",
+           "MMMM......R.......M..R.....R.....M....MMMM",
+           "MMMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
+           "MMMM...MMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
+           "MMMM.RRMMMMMMMMMMMMMMCMMMMMMMMMMMMMMMMMMMM",
+           "MMMM..R......R...R..M..R......R.R.....MMMM",
+           "MMMM..RRR.R..R..RRR.B..RRR.R..R.RR..I.MMMM",
+           "MMMM......R.........M......R..........MMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+           "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM"};
+}
 
     //Criação de grafo
     private Grafo<Terreno, double> CriaGrafo(IReadOnlyList<int> dificuldadesBases, Dictionary<char, TipoTerreno> tiposDeTerrenoPorLetra)
@@ -187,7 +307,7 @@ public class Terminal : MonoBehaviour
 
         var indexBaseInimiga = 0;
         for (var y = 0; y < _tamanhoDoMapa; y++)
-            for (var x = 0; x < _tamanhoDoMapa - 1; x++)
+            for (var x = 0; x < _tamanhoDoMapa; x++)
             {
                 var corrente = _arquivo[y][x];
                 grafo.AdicionarVetice(corrente != 'B'
@@ -199,16 +319,16 @@ public class Terminal : MonoBehaviour
     private void AdicionarArestas(Grafo<Terreno, double> grafo)
     {
         for (var y = 0; y < _tamanhoDoMapa; y++)
-            for (var x = 0; x < _tamanhoDoMapa - 1; x++)
+            for (var x = 0; x < _tamanhoDoMapa; x++)
             {
                 var corrente = PegarTerrenoDeGrafoEmCoordenada(grafo, x, y);
 
                 foreach (var coordinates in new[]
                 {
-                        new[] {1, 0},
+                        new[] { 1, 0},
                         new[] {-1, 0},
-                        new[] {0, 1},
-                        new[] {0, -1}
+                        new[] { 0, 1},
+                        new[] { 0,-1}
                     })
                 {
                     var noAdjacente = PegarTerrenoDeGrafoEmCoordenada(grafo, x + coordinates[0], y + coordinates[1]);
@@ -221,8 +341,10 @@ public class Terminal : MonoBehaviour
 
     private Terreno PegarTerrenoDeGrafoEmCoordenada(Grafo<Terreno, double> graph, int x, int y)
     {
-        if (x < 0 || y < 0 || x > _tamanhoDoMapa - 1 - 1 || y > _tamanhoDoMapa - 1) return null;
-        return graph.PegarVertices().Single(vertex => vertex.x == x && vertex.y == y);
+        if (x >= 0 && x < _tamanhoDoMapa && y >= 0 && y < _tamanhoDoMapa)
+            return graph.PegarVertices().Single(vertex => vertex.x == x && vertex.y == y);
+
+        return null;
     }
     #endregion Grafo
 
@@ -230,8 +352,8 @@ public class Terminal : MonoBehaviour
 
     private void CriaTelaTextura()
     {
-        texturaTela = CriaTextura();
-        Sprite sprite = Sprite.Create(texturaTela, new Rect(0, 0, texturaTela.width, texturaTela.height), new Vector2(0.5f, 0.5f), 100);
+        _texturaTela = CriaTextura();
+        Sprite sprite = Sprite.Create(_texturaTela, new Rect(0, 0, _texturaTela.width, _texturaTela.height), new Vector2(0.5f, 0.5f), 100);
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         sr.sprite = sprite;
     }
@@ -242,7 +364,7 @@ public class Terminal : MonoBehaviour
 
         for (var j = 0; j < _tamanhoDoMapa; j++)
         {
-            for (var i = 0; i < _tamanhoDoMapa - 1; i++)
+            for (var i = 0; i < _tamanhoDoMapa; i++)
             {
                 TipoTerreno t = tiposDeTerrenoPorLetra[_arquivo[j][i]];
                 SetaCorRegiao(tex, i, j, corPorTerreno[t]);
@@ -268,7 +390,7 @@ public class Terminal : MonoBehaviour
         if (_caminho == null || _caminho.Count <= 0)
             return;
 
-        for (int i = 0; i < _caminho.Count; i++)
+        for (int i = 0; i < _caminho.Count && i < _passosDesenhoCaminhoTotal; i++)
         {
             Terreno o = _caminho[i];
             SetaCorRegiao(tex, o.x, o.y, Color.magenta);
