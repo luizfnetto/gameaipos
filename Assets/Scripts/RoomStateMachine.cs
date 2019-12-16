@@ -1,13 +1,17 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityStandardAssets.Characters.FirstPerson;
 
 public class RoomStateMachine : MonoBehaviour
 {
     public GameObject entranceDoor;
     public GameObject terminal;
+    public GameObject player;
+    public GameObject gameOverPanel;
 
-    private StateId _currentState; 
+    private StateId _currentState;
+    private bool _dead = false;
 
     public enum StateId
     {
@@ -35,6 +39,7 @@ public class RoomStateMachine : MonoBehaviour
             case StateId.TerminalHacked:
                 break;
             case StateId.GameOver:
+                Die();
                 break;
         }
     }
@@ -47,6 +52,25 @@ public class RoomStateMachine : MonoBehaviour
     public void SetState (StateId state)
     {
         _currentState = state;
+    }
+
+    private void Die()
+    {
+        if (!_dead)
+        {
+            _dead = true;
+            FirstPersonController control = player.GetComponent<FirstPersonController>();
+            if (control.enabled)
+            {
+                control.enabled = false;
+            }
+            if (!gameOverPanel.active)
+            {
+                gameOverPanel.SetActive(true);
+            }
+            Cursor.visible = true;
+            Screen.lockCursor = false;
+        }
     }
 
     private void Hacking ()

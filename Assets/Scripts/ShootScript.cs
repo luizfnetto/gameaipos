@@ -9,15 +9,18 @@ public class ShootScript : MonoBehaviour
     public Camera camera;
     public ParticleSystem particles;
     public GameObject impactEffect;
+    public RoomStateMachine stateMachine;
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetButtonDown("Fire1"))
-        {
-            Shoot();
+        if (stateMachine.GetCurrentState() != RoomStateMachine.StateId.GameOver) {
+            if (Input.GetButtonDown("Fire1"))
+            {
+                Shoot();
+                //stateMachine.SetState(RoomStateMachine.StateId.GameOver); TODO
+            }
         }
-
     }
 
     void Shoot()
