@@ -526,6 +526,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1046411354}
     m_Modifications:
+    - target: {fileID: 1785033800017144, guid: 695aa4942897a40e6a9b55f63cfbce2a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4692062974380522, guid: 695aa4942897a40e6a9b55f63cfbce2a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 26.435204
@@ -852,6 +856,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5137f7c905ff8424ea864b03d44317f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _thresholdForRatio: 30
 --- !u!212 &723968675
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -7338,6 +7343,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5137f7c905ff8424ea864b03d44317f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _thresholdForRatio: 10
 --- !u!212 &1875737707
 SpriteRenderer:
   m_ObjectHideFlags: 0
