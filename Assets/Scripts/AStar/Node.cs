@@ -9,13 +9,13 @@ namespace GameAIPos
     public class Node
     {
         public int x, y;
-        public NodeType tipo;
+        public NodeType type;
 
-        public Node(int x, int y, NodeType tipo)
+        public Node(int x, int y, NodeType type)
         {
             this.x = x;
             this.y = y;
-            this.tipo = tipo;
+            this.type = type;
         }
     }
 
